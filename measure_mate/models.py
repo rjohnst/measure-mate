@@ -13,39 +13,41 @@ class Template(models.Model):
         return self.name
 
 
-class Attribute(models.Model):
+class Rating(models.Model):
     class Meta:
-        verbose_name_plural = "Attributes"
+        verbose_name_plural = "Ratings"
         unique_together = ("template", "name")
-        ordering = ['rank', 'pk']
+        unique_together = ("template", "rank")
+        ordering = ['template', 'rank', 'pk']
 
-    id = models.AutoField(primary_key=True, verbose_name="Attribute ID")
-    name = models.CharField(max_length=256, verbose_name="Attribute Name")
-    desc = models.TextField()
-    desc_class = models.TextField(default="")
-    template = models.ForeignKey(Template, related_name='attributes')
+    id = models.AutoField(primary_key=True, verbose_name="Rating ID")
+    name = models.CharField(max_length=256, verbose_name="Rating Name")
     rank = models.IntegerField(default=1)
+    colour = models.CharField(max_length=256, null=True)
+    template = models.ForeignKey(Template, on_delete=models.PROTECT, related_name='ratings')
 
     def __unicode__(self):
         return (self.template.name + " - " +
                 self.name)
 
 
-class Rating(models.Model):
+class Attribute(models.Model):
     class Meta:
-        verbose_name_plural = "Ratings"
-        unique_together = ("attribute", "name")
-        ordering = ['rank', 'pk']
+        verbose_name_plural = "Attributes"
+        unique_together = ("template", "name")
+        unique_together = ("template", "rank")
+        ordering = ['template', 'rank', 'pk']
 
-    id = models.AutoField(primary_key=True, verbose_name="Rating ID")
-    attribute = models.ForeignKey(Attribute, related_name='ratings')
-    name = models.CharField(max_length=256)
+    id = models.AutoField(primary_key=True, verbose_name="Attribute ID")
+    name = models.CharField(max_length=256, verbose_name="Attribute Name")
     desc = models.TextField()
     desc_class = models.TextField(default="")
+    template = models.ForeignKey(Template, on_delete=models.PROTECT, related_name='attributes')
     rank = models.IntegerField(default=1)
+    ratings = models.ManyToManyField(Rating, through='AttributeRatingRelationship')
 
     def __unicode__(self):
-        return (self.attribute.name + " - " +
+        return (self.template.name + " - " +
                 self.name)
 
 
@@ -84,12 +86,25 @@ class Assessment(models.Model):
     id = models.AutoField(primary_key=True, verbose_name="Assessment ID")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    template = models.ForeignKey(Template, related_name="assessments")
-    team = models.ForeignKey(Team, null=True, related_name="assessments")
+    template = models.ForeignKey(Template, on_delete=models.DO_NOTHING, related_name="assessments")
+    team = models.ForeignKey(Team, on_delete=models.DO_NOTHING, null=True, related_name="assessments")
     tags = models.ManyToManyField(Tag,)
 
     def __unicode__(self):
         return self.created.strftime('%Y-%m-%d %H:%M%Z') + " - " + self.template.name
+
+
+class AttributeRatingRelationship(models.Model):
+    class Meta:
+        ordering = ['attribute', 'rating']
+
+    attribute = models.ForeignKey(Attribute, on_delete=models.DO_NOTHING, related_name="attribute_ratings")
+    rating = models.ForeignKey(Rating, on_delete=models.DO_NOTHING, related_name="attribute_ratings")
+    desc = models.TextField()
+    desc_class = models.TextField(default="")
+
+    def __unicode__(self):
+        return str(self.attribute) + " - " + str(self.rating)
 
 
 class Measurement(models.Model):
@@ -98,9 +113,11 @@ class Measurement(models.Model):
         verbose_name_plural = "Measurements"
 
     assessment = models.ForeignKey(Assessment, related_name="measurements")
-    rating = models.ForeignKey(Rating, related_name="measurements")
-    target_rating = models.ForeignKey(Rating, blank=True, null=True, related_name="target_measurements")
+    rating = models.ForeignKey(AttributeRatingRelationship, on_delete=models.DO_NOTHING, related_name="+")
+    target_rating = models.ForeignKey(AttributeRatingRelationship, on_delete=models.DO_NOTHING, blank=True, null=True, related_name="+")
     observations = models.TextField(null=True)
 
     def __unicode__(self):
         return str(self.assessment) + " - " + str(self.rating)
+
+
