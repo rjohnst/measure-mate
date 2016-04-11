@@ -12,7 +12,8 @@
     "url": "https://github.com/mvillis/measure-mate/issues"
   },
   "scripts": {
-    "postinstall": "gulp build --production"
+    "postinstall": "gulp build --production",
+    "storybook": "start-storybook -p 9001"
   },
   "browserify": {
     "transform": [
@@ -85,5 +86,8 @@
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.0.0",
     "watchify": "^3.4.0"
+  },
+  "devDependencies": {
+    "@kadira/storybook": "^1.8.0"
   }
 }
